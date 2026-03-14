@@ -3,65 +3,84 @@ import API from "../services/api";
 
 const AddWebsiteModal = ({ onAdd }) => {
 
-    const [form, setForm] = useState({
-        name: "",
-        url: "",
-        category: ""
+  const [form, setForm] = useState({
+    url: "",
+    category: ""
+  });
+
+  const handleChange = (e) => {
+
+    setForm({
+      ...form,
+      [e.target.name]: e.target.value
     });
 
-    const handleChange = (e) => {
-        setForm({
-            ...form,
-            [e.target.name]: e.target.value
-        });
-    };
+  };
 
-    const handleSubmit = async (e) => {
+  const handleSubmit = async (e) => {
 
-        e.preventDefault();
+    e.preventDefault();
 
-        const meta = await API.post("/metadata", {
-            url: form.url
-        });
+    try {
 
-        const res = await API.post("/websites", {
-            ...form,
-            name: meta.data.title,
-            icon: meta.data.favicon
-        });
+      const meta = await API.post("/metadata", {
+        url: form.url
+      });
 
-        onAdd(res.data);
+      const res = await API.post("/websites", {
+        url: form.url,
+        name: meta.data.title,
+        icon: meta.data.favicon,
+        category: form.category
+      });
 
-        setForm({
-            name: "",
-            url: "",
-            category: ""
-        });
+      onAdd(res.data);
 
-    };
+      setForm({
+        url: "",
+        category: ""
+      });
 
-    return (
+    } catch (error) {
 
-        <form
-            onSubmit={handleSubmit}
-            className="flex flex-col md:flex-row gap-3 mb-8"
-        >
+      alert("Failed to add website");
 
-            <input
-                name="url"
-                placeholder="Paste website URL (https://...)"
-                value={form.url}
-                onChange={handleChange}
-                className="border rounded p-2 flex-1"
-            />
+    }
 
-            <button className="bg-black text-white px-6 py-2 rounded hover:bg-gray-800">
-                Add Website
-            </button>
+  };
 
-        </form>
+  return (
 
-    );
+    <form
+      onSubmit={handleSubmit}
+      className="flex flex-col md:flex-row gap-3 mb-10"
+    >
+
+      <input
+        name="url"
+        placeholder="Paste website URL (https://...)"
+        value={form.url}
+        onChange={handleChange}
+        className="border rounded p-2 flex-1"
+      />
+
+      <input
+        name="category"
+        placeholder="Category (Social Media, AI Tools...)"
+        value={form.category}
+        onChange={handleChange}
+        className="border rounded p-2 w-60"
+      />
+
+      <button
+        className="bg-black text-white px-6 py-2 rounded hover:bg-gray-800"
+      >
+        Add Website
+      </button>
+
+    </form>
+
+  );
 
 };
 

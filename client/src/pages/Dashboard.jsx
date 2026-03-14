@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import API from "../services/api";
 
-import WebsiteCard from "../components/WebsiteCard";
 import AddWebsiteModal from "../components/AddWebsiteModal";
+import CategoryCard from "../components/CategoryCard";
 
 const Dashboard = () => {
 
@@ -13,11 +13,8 @@ const Dashboard = () => {
   }, []);
 
   const fetchWebsites = async () => {
-
     const res = await API.get("/websites");
-
     setWebsites(res.data);
-
   };
 
   const addWebsite = (site) => {
@@ -25,32 +22,47 @@ const Dashboard = () => {
   };
 
   const deleteWebsite = async (id) => {
-
     await API.delete(`/websites/${id}`);
-
     setWebsites(websites.filter(site => site._id !== id));
-
   };
+
+  // Group websites by category
+  const groupByCategory = (sites) => {
+    return sites.reduce((groups, site) => {
+      const category = site.category || "General";
+
+      if (!groups[category]) {
+        groups[category] = [];
+      }
+
+      groups[category].push(site);
+
+      return groups;
+    }, {});
+  };
+
+  const groupedWebsites = groupByCategory(websites);
 
   return (
 
-    <div className="min-h-screen bg-gray-100 p-10">
+    <div className="min-h-screen bg-white">
 
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-6xl mx-auto px-6 py-10">
 
-        <h1 className="text-4xl font-bold mb-8 text-center">
+        <h1 className="text-4xl font-bold text-center text-black mb-8">
           LinkHub 🚀
         </h1>
 
         <AddWebsiteModal onAdd={addWebsite} />
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mt-10">
 
-          {websites.map(site => (
+          {Object.keys(groupedWebsites).map(category => (
 
-            <WebsiteCard
-              key={site._id}
-              site={site}
+            <CategoryCard
+              key={category}
+              category={category}
+              websites={groupedWebsites[category]}
               onDelete={deleteWebsite}
             />
 

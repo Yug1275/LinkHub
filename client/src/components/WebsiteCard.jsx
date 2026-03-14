@@ -1,8 +1,34 @@
-const WebsiteCard = ({ site, onDelete }) => {
+import { useDrag, useDrop } from "react-dnd";
+
+const WebsiteCard = ({ site, index, moveCard, onDelete }) => {
+
+  const [{ isDragging }, drag] = useDrag(() => ({
+    type: "CARD",
+    item: { index },
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+  }));
+
+  const [, drop] = useDrop(() => ({
+    accept: "CARD",
+    hover(item) {
+
+      if (item.index === index) return;
+
+      moveCard(item.index, index);
+
+      item.index = index;
+    },
+  }));
 
   return (
 
-    <div className="bg-white rounded-xl shadow hover:shadow-lg hover:scale-105 transition p-4 flex flex-col items-center gap-3">
+    <div
+      ref={(node) => drag(drop(node))}
+      className="bg-white rounded-xl shadow hover:shadow-lg hover:scale-105 transition p-4 flex flex-col items-center gap-3 cursor-move"
+      style={{ opacity: isDragging ? 0.5 : 1 }}
+    >
 
       <a
         href={site.url}
@@ -17,7 +43,7 @@ const WebsiteCard = ({ site, onDelete }) => {
           className="w-10 h-10"
         />
 
-        <p className="font-semibold text-sm text-center">
+        <p className="font-semibold text-sm text-center truncate w-full">
           {site.name}
         </p>
 
