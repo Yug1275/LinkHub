@@ -3,31 +3,46 @@ const cheerio = require("cheerio");
 
 exports.getMetadata = async (req, res) => {
 
-  try {
+    try {
 
-    const { url } = req.body;
+        const { url } = req.body;
 
-    const response = await axios.get(url);
+        const response = await axios.get(url);
 
-    const $ = cheerio.load(response.data);
+        const $ = cheerio.load(response.data);
 
-    let title = $("title").text();
+        let title = $("title").text();
 
-    const domain = new URL(url).hostname.replace("www.", "");
+        // Clean long titles
+        if (title.includes("·")) {
+            title = title.split("·")[0];
+        }
 
-    const favicon =
-      $('link[rel="icon"]').attr("href") ||
-      `https://www.google.com/s2/favicons?domain=${domain}`;
+        if (title.includes("|")) {
+            title = title.split("|")[0];
+        }
 
-    res.json({
-      title,
-      favicon
-    });
+        if (title.includes("-")) {
+            title = title.split("-")[0];
+        }
 
-  } catch (error) {
+        title = title.trim();
 
-    res.status(500).json({ error: "Metadata fetch failed" });
+        const domain = new URL(url).hostname.replace("www.", "");
 
-  }
+        const favicon =
+            $('link[rel="icon"]').attr("href") ||
+            `https://www.google.com/s2/favicons?domain=${domain}`;
+
+        res.json({
+            title,
+            favicon
+        });
+
+    } catch (error) {
+
+        res.status(500).json({ error: "Metadata fetch failed" });
+
+    }
 
 };

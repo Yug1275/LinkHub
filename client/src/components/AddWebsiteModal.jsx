@@ -41,37 +41,26 @@ const AddWebsiteModal = ({ onAdd }) => {
     };
 
     return (
-        <form onSubmit={handleSubmit} className="flex gap-2 mb-6">
 
-            <input
-                name="name"
-                placeholder="Website Name"
-                value={form.name}
-                onChange={handleChange}
-                className="border p-2"
-            />
+        <form
+            onSubmit={handleSubmit}
+            className="flex flex-col md:flex-row gap-3 mb-8"
+        >
 
             <input
                 name="url"
-                placeholder="https://..."
+                placeholder="Paste website URL (https://...)"
                 value={form.url}
                 onChange={handleChange}
-                className="border p-2"
+                className="border rounded p-2 flex-1"
             />
 
-            <input
-                name="category"
-                placeholder="Category"
-                value={form.category}
-                onChange={handleChange}
-                className="border p-2"
-            />
-
-            <button className="bg-black text-white px-4">
-                Add
+            <button className="bg-black text-white px-6 py-2 rounded hover:bg-gray-800">
+                Add Website
             </button>
 
         </form>
+
     );
 
 };

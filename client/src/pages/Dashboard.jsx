@@ -21,9 +21,7 @@ const Dashboard = () => {
   };
 
   const addWebsite = (site) => {
-
     setWebsites([...websites, site]);
-
   };
 
   const deleteWebsite = async (id) => {
@@ -35,29 +33,35 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="p-10">
 
-      <h1 className="text-3xl font-bold mb-6">
-        LinkHub Dashboard
-      </h1>
+    <div className="min-h-screen bg-gray-100 p-10">
 
-      <AddWebsiteModal onAdd={addWebsite} />
+      <div className="max-w-5xl mx-auto">
 
-      <div className="grid grid-cols-3 gap-4">
+        <h1 className="text-4xl font-bold mb-8 text-center">
+          LinkHub 🚀
+        </h1>
 
-        {websites.map(site => (
+        <AddWebsiteModal onAdd={addWebsite} />
 
-          <WebsiteCard
-            key={site._id}
-            site={site}
-            onDelete={deleteWebsite}
-          />
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
 
-        ))}
+          {websites.map(site => (
+
+            <WebsiteCard
+              key={site._id}
+              site={site}
+              onDelete={deleteWebsite}
+            />
+
+          ))}
+
+        </div>
 
       </div>
 
     </div>
+
   );
 
 };

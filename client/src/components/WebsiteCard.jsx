@@ -1,35 +1,37 @@
 const WebsiteCard = ({ site, onDelete }) => {
 
   return (
-    <div className="bg-white shadow p-4 rounded flex justify-between items-center">
+
+    <div className="bg-white rounded-xl shadow hover:shadow-lg hover:scale-105 transition p-4 flex flex-col items-center gap-3">
 
       <a
         href={site.url}
         target="_blank"
         rel="noreferrer"
-        className="flex items-center gap-2"
+        className="flex flex-col items-center gap-2"
       >
 
-        {site.icon && (
-          <img
-            src={site.icon}
-            alt="icon"
-            className="w-5 h-5"
-          />
-        )}
+        <img
+          src={site.icon}
+          alt="icon"
+          className="w-10 h-10"
+        />
 
-        {site.name}
+        <p className="font-semibold text-sm text-center">
+          {site.name}
+        </p>
 
       </a>
 
       <button
         onClick={() => onDelete(site._id)}
-        className="text-red-500"
+        className="text-xs text-red-500 hover:text-red-700"
       >
         Delete
       </button>
 
     </div>
+
   );
 
 };
