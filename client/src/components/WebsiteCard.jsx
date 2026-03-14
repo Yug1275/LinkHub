@@ -7,9 +7,19 @@ const WebsiteCard = ({ site, onDelete }) => {
         href={site.url}
         target="_blank"
         rel="noreferrer"
-        className="font-semibold"
+        className="flex items-center gap-2"
       >
+
+        {site.icon && (
+          <img
+            src={site.icon}
+            alt="icon"
+            className="w-5 h-5"
+          />
+        )}
+
         {site.name}
+
       </a>
 
       <button

@@ -6,12 +6,13 @@ exports.addWebsite = async (req, res) => {
 
   try {
 
-    const { name, url, category } = req.body;
+    const { name, url, category, icon } = req.body;
 
     const website = new Website({
       name,
       url,
       category,
+      icon,
       userId: req.user.id
     });
 

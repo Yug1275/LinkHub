@@ -4,6 +4,7 @@ const dotenv = require("dotenv");
 const connectDB = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
 const websiteRoutes = require("./routes/websiteRoutes");
+const metadataRoutes = require("./routes/metadataRoutes");
 
 dotenv.config();
 
@@ -13,6 +14,7 @@ app.use(cors());
 app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/websites", websiteRoutes);
+app.use("/api/metadata", metadataRoutes);
 
 connectDB();
 
