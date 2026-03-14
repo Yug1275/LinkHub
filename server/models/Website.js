@@ -1,22 +1,40 @@
 const mongoose = require("mongoose");
 
-const websiteSchema = new mongoose.Schema({
-
+const websiteSchema = new mongoose.Schema(
+{
   userId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "User"
+    ref: "User",
+    required: true
   },
 
-  name: String,
+  name: {
+    type: String,
+    required: true
+  },
 
-  url: String,
+  url: {
+    type: String,
+    required: true
+  },
 
-  icon: String,
+  icon: {
+    type: String,
+    default: ""
+  },
 
-  category: String,
+  category: {
+    type: String,
+    default: "General"
+  },
 
-  position: Number
+  position: {
+    type: Number,
+    default: 0
+  }
 
-});
+},
+{ timestamps: true }
+);
 
 module.exports = mongoose.model("Website", websiteSchema);

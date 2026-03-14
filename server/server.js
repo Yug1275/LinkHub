@@ -2,8 +2,8 @@ const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const connectDB = require("./config/db");
-
 const authRoutes = require("./routes/authRoutes");
+const websiteRoutes = require("./routes/websiteRoutes");
 
 dotenv.config();
 
@@ -11,10 +11,12 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use("/api/auth", authRoutes);
+app.use("/api/websites", websiteRoutes);
 
 connectDB();
 
-app.use("/api/auth", authRoutes);
+
 
 app.get("/", (req, res) => {
   res.send("LinkHub API Running");
