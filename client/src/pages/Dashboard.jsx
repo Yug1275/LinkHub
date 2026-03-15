@@ -1,20 +1,46 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext, useCallback } from "react";
 import API from "../services/api";
-
+import { ThemeContext } from "../context/ThemeContext";
 import AddWebsiteModal from "../components/AddWebsiteModal";
 import CategoryCard from "../components/CategoryCard";
+import SettingsPanel from "../components/SettingsPanel";
+import CommandPalette from "../components/CommandPalette";
+import ImportExportPanel from "../components/ImportExportPanel";
+import FocusMode from "../components/FocusMode";
+import ProfileAvatar from "../components/ProfileAvatar";
+import WidgetPanel from "../components/widgets/WidgetPanel";
+import { motion, AnimatePresence } from "framer-motion";
 
 const Dashboard = () => {
-
   const [websites, setWebsites] = useState([]);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [enabledWidgets, setEnabledWidgets] = useState(["clock"]);
+
+  const { theme, toggleTheme, settings, loadSettings, getBackgroundStyle, updateSettings } = useContext(ThemeContext);
 
   useEffect(() => {
     fetchWebsites();
-  }, []);
+    loadSettings();
+  }, [loadSettings]);
+
+  // Sync enabled widgets from settings
+  useEffect(() => {
+    if (settings.enabledWidgets) {
+      setEnabledWidgets(settings.enabledWidgets);
+    }
+  }, [settings.enabledWidgets]);
 
   const fetchWebsites = async () => {
-    const res = await API.get("/websites");
-    setWebsites(res.data);
+    try {
+      setLoading(true);
+      const res = await API.get("/websites");
+      setWebsites(res.data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const addWebsite = (site) => {
@@ -26,56 +52,243 @@ const Dashboard = () => {
     setWebsites(websites.filter(site => site._id !== id));
   };
 
-  // Group websites by category
-  const groupByCategory = (sites) => {
-    return sites.reduce((groups, site) => {
-      const category = site.category || "General";
 
-      if (!groups[category]) {
-        groups[category] = [];
-      }
-
-      groups[category].push(site);
-
-      return groups;
-    }, {});
+  const handleToggleWidget = (widgetId) => {
+    const updated = enabledWidgets.includes(widgetId)
+      ? enabledWidgets.filter(w => w !== widgetId)
+      : [...enabledWidgets, widgetId];
+    setEnabledWidgets(updated);
+    updateSettings({ enabledWidgets: updated });
   };
 
-  const groupedWebsites = groupByCategory(websites);
+  // Group websites by category
+  const groupByCategory = useCallback((sites) => {
+    return sites.reduce((groups, site) => {
+      const category = site.category || "General";
+      if (!groups[category]) groups[category] = [];
+      groups[category].push(site);
+      return groups;
+    }, {});
+  }, []);
+
+  // Apply focus mode filter
+  const getFilteredGroups = () => {
+    const grouped = groupByCategory(websites);
+    if (settings.focusCategories && settings.focusCategories.length > 0) {
+      const filtered = {};
+      settings.focusCategories.forEach(cat => {
+        if (grouped[cat]) filtered[cat] = grouped[cat];
+      });
+      return filtered;
+    }
+    return grouped;
+  };
+
+  const groupedWebsites = getFilteredGroups();
+  const allCategories = Object.keys(groupByCategory(websites));
 
   return (
+    <div
+      className="min-h-screen transition-all duration-500 relative"
+      style={getBackgroundStyle()}
+    >
+      {/* Blur Overlay */}
+      {settings.blur > 0 && (
+        <div
+          className="bg-overlay"
+          style={{ backdropFilter: `blur(${settings.blur}px)` }}
+        />
+      )}
 
-    <div className="min-h-screen bg-white">
+      {/* Opacity Overlay */}
+      {settings.opacity < 100 && (
+        <div
+          className="bg-overlay"
+          style={{
+            backgroundColor: theme === "dark"
+              ? `rgba(0,0,0,${1 - settings.opacity / 100})`
+              : `rgba(255,255,255,${1 - settings.opacity / 100})`
+          }}
+        />
+      )}
 
-      <div className="max-w-6xl mx-auto px-6 py-10">
+      {/* Main Content */}
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
 
-        <h1 className="text-4xl font-bold text-center text-black mb-8">
-          LinkHub 🚀
-        </h1>
+        {/* Header */}
+        <motion.header
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 sm:mb-10"
+        >
+          {/* Left: Logo + Tagline */}
+          <div className="flex flex-col">
+            <h1 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-purple-500 via-purple-400 to-indigo-500 bg-clip-text text-transparent">
+              LinkHub
+            </h1>
+            <p className={`text-xs sm:text-sm mt-1 ${
+              theme === "dark" ? "text-gray-400" : "text-gray-500"
+            }`}>
+              Your personal link dashboard
+            </p>
+          </div>
 
-        <AddWebsiteModal onAdd={addWebsite} />
+          {/* Right: Actions + Profile */}
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+            {/* Import/Export */}
+            <ImportExportPanel onImportComplete={fetchWebsites} />
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mt-10">
+            {/* Theme Toggle */}
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={toggleTheme}
+              className={`p-2.5 rounded-xl transition-all duration-200 ${
+                theme === "dark"
+                  ? "bg-white/10 hover:bg-white/15 text-yellow-400"
+                  : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+              }`}
+              title="Toggle theme"
+            >
+              {theme === "light" ? "🌙" : "☀️"}
+            </motion.button>
 
-          {Object.keys(groupedWebsites).map(category => (
+            {/* Settings */}
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setSettingsOpen(true)}
+              className={`p-2.5 rounded-xl transition-all duration-200 ${
+                theme === "dark"
+                  ? "bg-white/10 hover:bg-white/15 text-gray-300"
+                  : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+              }`}
+              title="Settings"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </motion.button>
 
-            <CategoryCard
-              key={category}
-              category={category}
-              websites={groupedWebsites[category]}
-              onDelete={deleteWebsite}
-            />
+            {/* Profile Avatar */}
+            <ProfileAvatar />
+          </div>
+        </motion.header>
 
-          ))}
+        {/* Widgets */}
+        <WidgetPanel
+          enabledWidgets={enabledWidgets}
+          onToggleWidget={handleToggleWidget}
+        />
 
+        {/* Add Website */}
+        <div className="mb-6">
+          <AddWebsiteModal onAdd={addWebsite} />
         </div>
 
+        {/* Focus Mode */}
+        {allCategories.length > 1 && (
+          <div className="mb-6">
+            <FocusMode categories={allCategories} />
+          </div>
+        )}
+
+        {/* Loading State */}
+        {loading && (
+          <div className="flex items-center justify-center py-20">
+            <div className="flex flex-col items-center gap-4">
+              <svg className="animate-spin h-10 w-10 text-violet-500" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              <p className={`text-sm ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
+                Loading your dashboard...
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!loading && websites.length === 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center py-20"
+          >
+            <div className="text-6xl mb-4">🔗</div>
+            <h2 className={`text-xl font-semibold mb-2 ${
+              theme === "dark" ? "text-white" : "text-gray-900"
+            }`}>
+              No websites yet
+            </h2>
+            <p className={`text-sm ${
+              theme === "dark" ? "text-gray-400" : "text-gray-500"
+            }`}>
+              Add your first website using the form above to get started!
+            </p>
+          </motion.div>
+        )}
+
+        {/* Category Grid */}
+        {!loading && Object.keys(groupedWebsites).length > 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6"
+          >
+            <AnimatePresence>
+              {Object.keys(groupedWebsites).map(category => (
+                <CategoryCard
+                  key={category}
+                  category={category}
+                  websites={groupedWebsites[category]}
+                  onDelete={deleteWebsite}
+                />
+              ))}
+            </AnimatePresence>
+          </motion.div>
+        )}
+
+        {/* Focus Mode Indicator */}
+        {settings.focusCategories && settings.focusCategories.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={`fixed bottom-6 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-full text-sm font-medium z-30 ${
+              theme === "dark"
+                ? "bg-violet-600/80 text-white backdrop-blur-sm"
+                : "bg-violet-100 text-violet-700"
+            }`}
+          >
+            🎯 Focus: {settings.focusCategories.join(", ")}
+          </motion.div>
+        )}
+
+        {/* Keyboard shortcut hint */}
+        <div className={`text-center mt-12 pb-8 text-xs ${
+          theme === "dark" ? "text-gray-600" : "text-gray-400"
+        }`}>
+          Press <kbd className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${
+            theme === "dark" ? "bg-white/10" : "bg-gray-200"
+          }`}>Ctrl</kbd> + <kbd className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${
+            theme === "dark" ? "bg-white/10" : "bg-gray-200"
+          }`}>K</kbd> to search
+        </div>
       </div>
 
+      {/* Settings Panel */}
+      <SettingsPanel
+        isOpen={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+      />
+
+      {/* Command Palette */}
+      <CommandPalette websites={websites} />
     </div>
-
   );
-
 };
 
 export default Dashboard;
