@@ -1,9 +1,16 @@
-import { useContext } from "react";
+import { useContext, useState, useEffect, useCallback } from "react";
 import { ThemeContext } from "../context/ThemeContext";
 import { motion } from "framer-motion";
+import WebsiteCard from "./WebsiteCard";
 
-const CategoryCard = ({ category, websites, onDelete }) => {
+const CategoryCard = ({ category, websites, onDelete, onReorder }) => {
   const { theme, settings } = useContext(ThemeContext);
+  const [localWebsites, setLocalWebsites] = useState(websites);
+
+  // Sync local state when prop changes (e.g. after add/delete)
+  useEffect(() => {
+    setLocalWebsites(websites);
+  }, [websites]);
 
   const getIconStyleClasses = () => {
     switch (settings.iconStyle) {
@@ -14,6 +21,16 @@ const CategoryCard = ({ category, websites, onDelete }) => {
       default: return "rounded-xl";
     }
   };
+
+  const moveCard = useCallback((fromIndex, toIndex) => {
+    setLocalWebsites((prev) => {
+      const updated = [...prev];
+      const [moved] = updated.splice(fromIndex, 1);
+      updated.splice(toIndex, 0, moved);
+      if (onReorder) onReorder(category, updated);
+      return updated;
+    });
+  }, [category, onReorder]);
 
   return (
     <motion.div
@@ -38,7 +55,7 @@ const CategoryCard = ({ category, websites, onDelete }) => {
           <p className={`text-xs mt-0.5 ${
             theme === "dark" ? "text-gray-400" : "text-gray-500"
           }`}>
-            {websites.length} {websites.length === 1 ? "website" : "websites"}
+            {localWebsites.length} {localWebsites.length === 1 ? "website" : "websites"}
           </p>
         </div>
         <div className={`text-xs px-2.5 py-1 rounded-full font-medium ${
@@ -46,59 +63,23 @@ const CategoryCard = ({ category, websites, onDelete }) => {
             ? "bg-violet-500/20 text-violet-300"
             : "bg-violet-100 text-violet-600"
         }`}>
-          {websites.length}
+          {localWebsites.length}
         </div>
       </div>
 
       {/* Website Grid */}
       <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 gap-3">
-        {websites.map((site, index) => (
-          <motion.div
+        {localWebsites.map((site, index) => (
+          <WebsiteCard
             key={site._id}
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: index * 0.05, duration: 0.3 }}
-            className="flex flex-col items-center gap-2 group"
-          >
-            <a
-              href={site.url}
-              target="_blank"
-              rel="noreferrer"
-              className="flex flex-col items-center gap-2 w-full"
-            >
-              <motion.div
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.95 }}
-                className={`w-12 h-12 sm:w-14 sm:h-14 ${getIconStyleClasses()} flex items-center justify-center transition-all duration-200 ${
-                  theme === "dark"
-                    ? "bg-white/10 hover:bg-white/20"
-                    : "bg-gray-100 hover:bg-gray-200"
-                }`}
-              >
-                <img
-                  src={site.icon}
-                  alt={site.name}
-                  className="w-6 h-6 sm:w-7 sm:h-7"
-                  onError={(e) => {
-                    e.target.src = `https://www.google.com/s2/favicons?domain=${new URL(site.url).hostname}&sz=64`;
-                  }}
-                />
-              </motion.div>
-
-              <p className={`text-xs text-center font-medium truncate w-full ${
-                theme === "dark" ? "text-gray-300" : "text-gray-700"
-              }`}>
-                {site.name}
-              </p>
-            </a>
-
-            <button
-              onClick={() => onDelete(site._id)}
-              className="text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-red-400 hover:text-red-300"
-            >
-              Remove
-            </button>
-          </motion.div>
+            site={site}
+            index={index}
+            moveCard={moveCard}
+            onDelete={onDelete}
+            theme={theme}
+            iconStyleClasses={getIconStyleClasses()}
+            category={category}
+          />
         ))}
       </div>
     </motion.div>

@@ -6,6 +6,7 @@ import CategoryCard from "../components/CategoryCard";
 import SettingsPanel from "../components/SettingsPanel";
 import CommandPalette from "../components/CommandPalette";
 import ImportExportPanel from "../components/ImportExportPanel";
+import Footer from "../components/Footer";
 import FocusMode from "../components/FocusMode";
 import ProfileAvatar from "../components/ProfileAvatar";
 import WidgetPanel from "../components/widgets/WidgetPanel";
@@ -50,6 +51,15 @@ const Dashboard = () => {
   const deleteWebsite = async (id) => {
     await API.delete(`/websites/${id}`);
     setWebsites(websites.filter(site => site._id !== id));
+  };
+
+  const handleReorder = (category, reorderedWebsites) => {
+    setWebsites((prev) => {
+      const otherCategories = prev.filter(
+        (site) => (site.category || "General") !== category
+      );
+      return [...otherCategories, ...reorderedWebsites];
+    });
   };
 
 
@@ -246,6 +256,7 @@ const Dashboard = () => {
                   category={category}
                   websites={groupedWebsites[category]}
                   onDelete={deleteWebsite}
+                  onReorder={handleReorder}
                 />
               ))}
             </AnimatePresence>
@@ -277,6 +288,9 @@ const Dashboard = () => {
             theme === "dark" ? "bg-white/10" : "bg-gray-200"
           }`}>K</kbd> to search
         </div>
+
+        {/* Footer */}
+        <Footer />
       </div>
 
       {/* Settings Panel */}
