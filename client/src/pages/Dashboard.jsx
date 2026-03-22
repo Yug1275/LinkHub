@@ -1,4 +1,4 @@
-import { useEffect, useState, useContext, useCallback } from "react";
+import { useEffect, useState, useContext, useCallback, useRef } from "react";
 import API from "../services/api";
 import { ThemeContext } from "../context/ThemeContext";
 import AddWebsiteModal from "../components/AddWebsiteModal";
@@ -14,11 +14,26 @@ import { motion, AnimatePresence } from "framer-motion";
 
 const Dashboard = () => {
   const [websites, setWebsites] = useState([]);
+  const [categoryOrder, setCategoryOrder] = useState([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [enabledWidgets, setEnabledWidgets] = useState(["clock"]);
+  const [layoutSaveStatus, setLayoutSaveStatus] = useState("idle");
 
-  const { theme, toggleTheme, settings, loadSettings, getBackgroundStyle, updateSettings } = useContext(ThemeContext);
+  const { theme, toggleTheme, settings, settingsLoaded, loadSettings, getBackgroundStyle, updateSettings } = useContext(ThemeContext);
+  const saveOrderTimeoutRef = useRef(null);
+  const saveStatusTimeoutRef = useRef(null);
+
+  const areArraysEqual = useCallback((a = [], b = []) => {
+    if (a.length !== b.length) return false;
+    return a.every((item, index) => item === b[index]);
+  }, []);
+
+  const mergeCategoryOrder = useCallback((baseOrder, categories) => {
+    const kept = baseOrder.filter((category) => categories.includes(category));
+    const added = categories.filter((category) => !kept.includes(category));
+    return [...kept, ...added];
+  }, []);
 
   useEffect(() => {
     fetchWebsites();
@@ -53,6 +68,18 @@ const Dashboard = () => {
     setWebsites(websites.filter(site => site._id !== id));
   };
 
+  const deleteCategory = useCallback(async (categoryName) => {
+    try {
+      await API.delete(`/websites/category/${encodeURIComponent(categoryName)}`);
+      setWebsites((prev) =>
+        prev.filter((site) => (site.category || "General") !== categoryName)
+      );
+      setCategoryOrder((prev) => prev.filter((category) => category !== categoryName));
+    } catch (err) {
+      console.error("Failed to delete category:", err);
+    }
+  }, []);
+
   const handleReorder = (category, reorderedWebsites) => {
     setWebsites((prev) => {
       const otherCategories = prev.filter(
@@ -81,6 +108,89 @@ const Dashboard = () => {
     }, {});
   }, []);
 
+  useEffect(() => {
+    const grouped = groupByCategory(websites);
+    const categories = Object.keys(grouped);
+
+    setCategoryOrder((prev) => {
+      const seedOrder = settingsLoaded
+        ? (settings.categoryOrder || [])
+        : (prev.length ? prev : categories);
+      const merged = mergeCategoryOrder(seedOrder, categories);
+      return areArraysEqual(prev, merged) ? prev : merged;
+    });
+  }, [
+    websites,
+    settingsLoaded,
+    settings.categoryOrder,
+    groupByCategory,
+    mergeCategoryOrder,
+    areArraysEqual,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      if (saveOrderTimeoutRef.current) {
+        clearTimeout(saveOrderTimeoutRef.current);
+      }
+      if (saveStatusTimeoutRef.current) {
+        clearTimeout(saveStatusTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!settingsLoaded) return;
+    const savedOrder = settings.categoryOrder || [];
+
+    if (areArraysEqual(categoryOrder, savedOrder)) return;
+
+    if (saveOrderTimeoutRef.current) {
+      clearTimeout(saveOrderTimeoutRef.current);
+    }
+
+    setLayoutSaveStatus("saving");
+
+    saveOrderTimeoutRef.current = setTimeout(() => {
+      updateSettings({ categoryOrder })
+        .then(() => {
+          setLayoutSaveStatus("saved");
+          if (saveStatusTimeoutRef.current) {
+            clearTimeout(saveStatusTimeoutRef.current);
+          }
+          saveStatusTimeoutRef.current = setTimeout(() => {
+            setLayoutSaveStatus("idle");
+          }, 1400);
+        })
+        .catch((err) => {
+          console.error("Failed to save category layout:", err);
+          setLayoutSaveStatus("error");
+          if (saveStatusTimeoutRef.current) {
+            clearTimeout(saveStatusTimeoutRef.current);
+          }
+          saveStatusTimeoutRef.current = setTimeout(() => {
+            setLayoutSaveStatus("idle");
+          }, 2200);
+        });
+    }, 400);
+
+    return () => {
+      if (saveOrderTimeoutRef.current) {
+        clearTimeout(saveOrderTimeoutRef.current);
+      }
+    };
+  }, [categoryOrder, settings.categoryOrder, settingsLoaded, updateSettings, areArraysEqual]);
+
+  const moveCategory = useCallback((fromIndex, toIndex) => {
+    setCategoryOrder((prev) => {
+      if (fromIndex === toIndex) return prev;
+      const updated = [...prev];
+      const [moved] = updated.splice(fromIndex, 1);
+      updated.splice(toIndex, 0, moved);
+      return updated;
+    });
+  }, []);
+
   // Apply focus mode filter
   const getFilteredGroups = () => {
     const grouped = groupByCategory(websites);
@@ -95,6 +205,9 @@ const Dashboard = () => {
   };
 
   const groupedWebsites = getFilteredGroups();
+  const orderedCategories = categoryOrder.length
+    ? categoryOrder.filter((category) => groupedWebsites[category])
+    : Object.keys(groupedWebsites);
   const allCategories = Object.keys(groupByCategory(websites));
 
   return (
@@ -250,13 +363,16 @@ const Dashboard = () => {
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6"
           >
             <AnimatePresence>
-              {Object.keys(groupedWebsites).map(category => (
+              {orderedCategories.map((category, index) => (
                 <CategoryCard
                   key={category}
                   category={category}
                   websites={groupedWebsites[category]}
                   onDelete={deleteWebsite}
                   onReorder={handleReorder}
+                  onDeleteCategory={deleteCategory}
+                  index={index}
+                  moveCategory={moveCategory}
                 />
               ))}
             </AnimatePresence>
@@ -275,6 +391,28 @@ const Dashboard = () => {
             }`}
           >
             🎯 Focus: {settings.focusCategories.join(", ")}
+          </motion.div>
+        )}
+
+        {/* Layout Save Status */}
+        {layoutSaveStatus !== "idle" && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className={`fixed bottom-6 right-6 px-3.5 py-2 rounded-full text-xs font-medium z-30 backdrop-blur-md border transition-all duration-300 ${
+              layoutSaveStatus === "error"
+                ? (theme === "dark"
+                    ? "bg-red-500/20 border-red-400/40 text-red-200"
+                    : "bg-red-100 border-red-300 text-red-700")
+                : (theme === "dark"
+                    ? "bg-white/10 border-white/20 text-gray-200"
+                    : "bg-white/80 border-gray-200 text-gray-700")
+            }`}
+          >
+            {layoutSaveStatus === "saving" && "Saving layout..."}
+            {layoutSaveStatus === "saved" && "Layout saved"}
+            {layoutSaveStatus === "error" && "Save failed"}
           </motion.div>
         )}
 

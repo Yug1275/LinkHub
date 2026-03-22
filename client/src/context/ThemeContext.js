@@ -15,6 +15,8 @@ export const ThemeProvider = ({ children }) => {
     opacity: 100,
     iconStyle: "rounded",
     focusCategories: [],
+    enabledWidgets: ["clock"],
+    categoryOrder: [],
   });
 
   const [settingsLoaded, setSettingsLoaded] = useState(false);
@@ -43,6 +45,8 @@ export const ThemeProvider = ({ children }) => {
           opacity: res.data.opacity ?? 100,
           iconStyle: res.data.iconStyle || "rounded",
           focusCategories: res.data.focusCategories || [],
+          enabledWidgets: res.data.enabledWidgets || ["clock"],
+          categoryOrder: res.data.categoryOrder || [],
         });
         setSettingsLoaded(true);
       }
@@ -71,8 +75,9 @@ export const ThemeProvider = ({ children }) => {
   };
 
   const updateSettings = (newSettings) => {
-    setSettings(prev => ({ ...prev, ...newSettings }));
-    saveSettings({ ...settings, ...newSettings });
+    const mergedSettings = { ...settings, ...newSettings };
+    setSettings((prev) => ({ ...prev, ...newSettings }));
+    return saveSettings(mergedSettings);
   };
 
   // Get background style based on settings

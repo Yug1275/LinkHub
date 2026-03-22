@@ -1,11 +1,64 @@
-import { useContext, useState, useEffect, useCallback } from "react";
+import { useContext, useState, useEffect, useCallback, useRef } from "react";
 import { ThemeContext } from "../context/ThemeContext";
+import { useDrag, useDrop } from "react-dnd";
 import { motion } from "framer-motion";
 import WebsiteCard from "./WebsiteCard";
 
-const CategoryCard = ({ category, websites, onDelete, onReorder }) => {
+const CategoryCard = ({
+  category,
+  websites,
+  onDelete,
+  onReorder,
+  onDeleteCategory,
+  index,
+  moveCategory,
+}) => {
   const { theme, settings } = useContext(ThemeContext);
   const [localWebsites, setLocalWebsites] = useState(websites);
+  const ref = useRef(null);
+
+  const [{ isDragging }, drag] = useDrag(
+    () => ({
+      type: "CATEGORY",
+      item: { index },
+      collect: (monitor) => ({
+        isDragging: monitor.isDragging(),
+      }),
+    }),
+    [index]
+  );
+
+  const [, drop] = useDrop(
+    () => ({
+      accept: "CATEGORY",
+      hover(item, monitor) {
+        if (!ref.current) return;
+
+        const dragIndex = item.index;
+        const hoverIndex = index;
+
+        if (dragIndex === hoverIndex) return;
+
+        const hoverBoundingRect = ref.current.getBoundingClientRect();
+        const hoverMiddleY = (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2;
+        const clientOffset = monitor.getClientOffset();
+
+        if (!clientOffset) return;
+
+        const hoverClientY = clientOffset.y - hoverBoundingRect.top;
+
+        // Only move when cursor passes half the card height to prevent rapid swapping.
+        if (dragIndex < hoverIndex && hoverClientY < hoverMiddleY) return;
+        if (dragIndex > hoverIndex && hoverClientY > hoverMiddleY) return;
+
+        moveCategory(dragIndex, hoverIndex);
+        item.index = hoverIndex;
+      },
+    }),
+    [index, moveCategory]
+  );
+
+  drag(drop(ref));
 
   // Sync local state when prop changes (e.g. after add/delete)
   useEffect(() => {
@@ -34,18 +87,48 @@ const CategoryCard = ({ category, websites, onDelete, onReorder }) => {
 
   return (
     <motion.div
+      ref={ref}
       initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
+      animate={{ opacity: isDragging ? 0.45 : 1, y: 0 }}
       transition={{ duration: 0.4 }}
       whileHover={{ y: -4, transition: { duration: 0.2 } }}
-      className={`rounded-2xl p-6 sm:p-8 transition-all duration-300 ${
+      className={`relative rounded-2xl p-6 sm:p-8 transition-all duration-300 cursor-move ${
         theme === "dark"
           ? "glass-card hover:border-white/30"
           : "glass-card-light hover:shadow-xl hover:border-gray-300/50"
       }`}
     >
+      <button
+        onClick={() => onDeleteCategory(category)}
+        className={`absolute top-3 right-3 p-2 rounded-full backdrop-blur-md border transition-all duration-200 ${
+          theme === "dark"
+            ? "bg-white/10 border-white/10 text-gray-200 hover:bg-red-500/20 hover:border-red-400/40 hover:text-red-200"
+            : "bg-white/70 border-gray-200 text-gray-600 hover:bg-red-100 hover:border-red-300 hover:text-red-600"
+        }`}
+        aria-label={`Delete ${category} category`}
+        title="Delete category"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.75"
+          className="w-4 h-4"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18" />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M8 6V4.75A1.75 1.75 0 019.75 3h4.5A1.75 1.75 0 0116 4.75V6"
+          />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 6l-1 13a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M10 11v6M14 11v6" />
+        </svg>
+      </button>
+
       {/* Header */}
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center justify-between mb-5 pr-10">
         <div>
           <h2 className={`text-lg font-semibold ${
             theme === "dark" ? "text-white" : "text-gray-900"
