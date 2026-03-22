@@ -30,7 +30,7 @@ exports.updateNote = async (req, res) => {
     const note = await Note.findOneAndUpdate(
       { _id: req.params.id, userId: req.user.id },
       req.body,
-      { new: true }
+      { returnDocument: "after" }
     );
     if (!note) return res.status(404).json({ message: "Note not found" });
     res.json(note);

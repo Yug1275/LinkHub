@@ -62,7 +62,7 @@ exports.importData = async (req, res) => {
       await Settings.findOneAndUpdate(
         { userId },
         { ...settings, userId },
-        { upsert: true, new: true }
+          { upsert: true, returnDocument: "after" }
       );
     }
 

@@ -20,7 +20,7 @@ exports.updateSettings = async (req, res) => {
   const settings = await Settings.findOneAndUpdate(
     { userId: req.user.id },
     req.body,
-    { new: true, upsert: true }
+    { returnDocument: "after", upsert: true }
   );
 
   res.json(settings);

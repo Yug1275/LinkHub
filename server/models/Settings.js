@@ -46,6 +46,11 @@ const SettingsSchema = new mongoose.Schema({
   enabledWidgets: {
     type: [String],
     default: ["clock"]
+  },
+
+  categoryOrder: {
+    type: [String],
+    default: []
   }
 
 });

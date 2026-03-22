@@ -55,7 +55,7 @@ exports.updateWebsite = async (req, res) => {
     const website = await Website.findByIdAndUpdate(
       req.params.id,
       req.body,
-      { new: true }
+      { returnDocument: "after" }
     );
 
     res.json(website);
@@ -77,6 +77,49 @@ exports.deleteWebsite = async (req, res) => {
     await Website.findByIdAndDelete(req.params.id);
 
     res.json({ message: "Website deleted" });
+
+  } catch (error) {
+
+    res.status(500).json({ error: error.message });
+
+  }
+
+};
+
+
+// DELETE ALL WEBSITES IN A CATEGORY
+exports.deleteCategoryWebsites = async (req, res) => {
+
+  try {
+
+    const categoryName = decodeURIComponent(req.params.categoryName || "");
+
+    if (!categoryName) {
+      return res.status(400).json({ error: "Category name is required" });
+    }
+
+    const query =
+      categoryName === "General"
+        ? {
+            userId: req.user.id,
+            $or: [
+              { category: "General" },
+              { category: { $exists: false } },
+              { category: null },
+              { category: "" }
+            ]
+          }
+        : {
+            userId: req.user.id,
+            category: categoryName
+          };
+
+    const result = await Website.deleteMany(query);
+
+    res.json({
+      message: "Category websites deleted",
+      deletedCount: result.deletedCount
+    });
 
   } catch (error) {
 

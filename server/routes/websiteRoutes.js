@@ -8,7 +8,8 @@ const {
   addWebsite,
   getWebsites,
   updateWebsite,
-  deleteWebsite
+  deleteWebsite,
+  deleteCategoryWebsites
 } = require("../controllers/websiteController");
 
 
@@ -17,6 +18,8 @@ router.post("/", authMiddleware, addWebsite);
 router.get("/", authMiddleware, getWebsites);
 
 router.put("/:id", authMiddleware, updateWebsite);
+
+router.delete("/category/:categoryName", authMiddleware, deleteCategoryWebsites);
 
 router.delete("/:id", authMiddleware, deleteWebsite);
 
