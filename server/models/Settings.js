@@ -48,6 +48,30 @@ const SettingsSchema = new mongoose.Schema({
     default: ["clock"]
   },
 
+  widgetOrder: {
+    type: [String],
+    default: ["clock"],
+  },
+
+  pomodoro: {
+    workMinutes: {
+      type: Number,
+      default: 25,
+      min: 1,
+      max: 180,
+    },
+    breakMinutes: {
+      type: Number,
+      default: 5,
+      min: 1,
+      max: 60,
+    },
+    alarmSound: {
+      type: String,
+      default: "",
+    },
+  },
+
   categoryOrder: {
     type: [String],
     default: []
