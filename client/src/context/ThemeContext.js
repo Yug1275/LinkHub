@@ -16,6 +16,12 @@ export const ThemeProvider = ({ children }) => {
     iconStyle: "rounded",
     focusCategories: [],
     enabledWidgets: ["clock"],
+    widgetOrder: ["clock"],
+    pomodoro: {
+      workMinutes: 25,
+      breakMinutes: 5,
+      alarmSound: "",
+    },
     categoryOrder: [],
   });
 
@@ -46,6 +52,12 @@ export const ThemeProvider = ({ children }) => {
           iconStyle: res.data.iconStyle || "rounded",
           focusCategories: res.data.focusCategories || [],
           enabledWidgets: res.data.enabledWidgets || ["clock"],
+          widgetOrder: res.data.widgetOrder || ["clock"],
+          pomodoro: {
+            workMinutes: res.data.pomodoro?.workMinutes || 25,
+            breakMinutes: res.data.pomodoro?.breakMinutes || 5,
+            alarmSound: res.data.pomodoro?.alarmSound || "",
+          },
           categoryOrder: res.data.categoryOrder || [],
         });
         setSettingsLoaded(true);

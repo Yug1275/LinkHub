@@ -18,6 +18,7 @@ const Dashboard = () => {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [enabledWidgets, setEnabledWidgets] = useState(["clock"]);
+  const [widgetOrder, setWidgetOrder] = useState(["clock"]);
   const [layoutSaveStatus, setLayoutSaveStatus] = useState("idle");
 
   const { theme, toggleTheme, settings, settingsLoaded, loadSettings, getBackgroundStyle, updateSettings } = useContext(ThemeContext);
@@ -40,12 +41,18 @@ const Dashboard = () => {
     loadSettings();
   }, [loadSettings]);
 
-  // Sync enabled widgets from settings
+  // Sync enabled widgets and order from settings
   useEffect(() => {
-    if (settings.enabledWidgets) {
-      setEnabledWidgets(settings.enabledWidgets);
-    }
-  }, [settings.enabledWidgets]);
+    const enabled = settings.enabledWidgets || ["clock"];
+    const savedOrder = settings.widgetOrder || [];
+    const normalizedOrder = [
+      ...savedOrder.filter((id) => enabled.includes(id)),
+      ...enabled.filter((id) => !savedOrder.includes(id)),
+    ];
+
+    setEnabledWidgets(enabled);
+    setWidgetOrder(normalizedOrder);
+  }, [settings.enabledWidgets, settings.widgetOrder]);
 
   const fetchWebsites = async () => {
     try {
@@ -91,12 +98,26 @@ const Dashboard = () => {
 
 
   const handleToggleWidget = (widgetId) => {
-    const updated = enabledWidgets.includes(widgetId)
+    const updatedEnabled = enabledWidgets.includes(widgetId)
       ? enabledWidgets.filter(w => w !== widgetId)
       : [...enabledWidgets, widgetId];
-    setEnabledWidgets(updated);
-    updateSettings({ enabledWidgets: updated });
+
+    const updatedOrder = enabledWidgets.includes(widgetId)
+      ? widgetOrder.filter((id) => id !== widgetId)
+      : [...widgetOrder, widgetId];
+
+    setEnabledWidgets(updatedEnabled);
+    setWidgetOrder(updatedOrder);
+    updateSettings({
+      enabledWidgets: updatedEnabled,
+      widgetOrder: updatedOrder,
+    });
   };
+
+  const handleWidgetReorder = useCallback((nextOrder) => {
+    setWidgetOrder(nextOrder);
+    updateSettings({ widgetOrder: nextOrder });
+  }, [updateSettings]);
 
   // Group websites by category
   const groupByCategory = useCallback((sites) => {
@@ -303,7 +324,9 @@ const Dashboard = () => {
         {/* Widgets */}
         <WidgetPanel
           enabledWidgets={enabledWidgets}
+          widgetOrder={widgetOrder}
           onToggleWidget={handleToggleWidget}
+          onReorderWidgets={handleWidgetReorder}
         />
 
         {/* Add Website */}
